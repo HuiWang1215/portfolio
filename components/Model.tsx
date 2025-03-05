@@ -1,16 +1,24 @@
-import { useAnimations, useGLTF, useScroll, Text } from "@react-three/drei";
+import {
+  useAnimations,
+  useGLTF,
+  useScroll,
+  Text,
+  Html,
+} from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { Group } from "three";
 
-useGLTF.preload("/laptop.glb");
+// Replace with your custom domain URL
+const modelUrl = "https://jonnywang.tech/laptop.glb";
+
+useGLTF.preload(modelUrl);
 
 export default function Model() {
   const laptopRef = useRef<Group>(null);
-  const { nodes, materials, animations, scene } = useGLTF("/laptop.glb");
+  const { nodes, materials, animations, scene } = useGLTF(modelUrl);
   const { actions, clips } = useAnimations(animations, scene);
   const scroll = useScroll();
-  const [text, setText] = useState("");
 
   //@ts-ignore
   const action = actions["LTScreen|LTBase.001Action.001"];
@@ -18,15 +26,6 @@ export default function Model() {
     if (!action) return;
     action.play().paused = true;
     action.time = action.getClip().duration; // Set initial state to open
-
-    // Simulate typing effect
-    const fullText = "Hello, welcome to my laptop!";
-    let index = 0;
-    const interval = setInterval(() => {
-      setText((prev) => prev + fullText[index]);
-      index++;
-      if (index === fullText.length) clearInterval(interval);
-    }, 100);
   }, [action]);
 
   useFrame(() => {
@@ -45,17 +44,10 @@ export default function Model() {
   });
 
   return (
-    <group position={[0, -2, 0]}>
-      <primitive object={scene} ref={laptopRef} />
-      <Text
-        position={[0, 3, 0]}
-        fontSize={0.2}
-        color="rgb(123, 123, 123)"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {text}
-      </Text>
-    </group>
+    <Suspense fallback={<Html center>Loading...</Html>}>
+      <group position={[0, -2, 0]}>
+        <primitive object={scene} ref={laptopRef} />
+      </group>
+    </Suspense>
   );
 }
