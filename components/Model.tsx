@@ -9,8 +9,8 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { Group } from "three";
 
-// Replace with your custom domain URL
-const modelUrl = "https://jonnywang.tech/laptop.glb";
+const modelUrl =
+  "https://pub-506fb8b20a2a47668961c0d63217f1cb.r2.dev/laptop.glb";
 
 useGLTF.preload(modelUrl);
 

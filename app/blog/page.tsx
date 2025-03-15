@@ -1,14 +1,10 @@
 import { posts } from "@/posts";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 
-const Scene = dynamic(() => import("@/components/Scene"), { ssr: false });
-
-export default function Home() {
+export default function page() {
   return (
-    <main className="h-full">
-      <Scene />
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-3 place-items-center gap-5">
         {posts.map((p, idx) => (
           <Link
@@ -44,6 +40,6 @@ export default function Home() {
           </Link>
         ))}
       </div>
-    </main>
+    </div>
   );
 }
