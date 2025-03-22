@@ -2,22 +2,20 @@ import {
   useAnimations,
   useGLTF,
   useScroll,
-  Text,
   Html,
 } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useRef, useState, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { Group } from "three";
 
-const modelUrl =
-  "https://pub-506fb8b20a2a47668961c0d63217f1cb.r2.dev/laptop.glb";
+const modelUrl = "/laptop-optimized.glb";
 
 useGLTF.preload(modelUrl);
 
 export default function Model() {
   const laptopRef = useRef<Group>(null);
-  const { nodes, materials, animations, scene } = useGLTF(modelUrl);
-  const { actions, clips } = useAnimations(animations, scene);
+  const { animations, scene } = useGLTF(modelUrl);
+  const { actions } = useAnimations(animations, scene);
   const scroll = useScroll();
 
   //@ts-ignore
@@ -26,7 +24,7 @@ export default function Model() {
     if (!action) return;
     action.play().paused = true;
     action.time = action.getClip().duration; // Set initial state to open
-  }, [action]);
+  }, []);
 
   useFrame(() => {
     if (!action) return;
