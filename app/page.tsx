@@ -7,9 +7,9 @@ const Scene = dynamic(() => import("@/components/Scene"), { ssr: false });
 
 export default function Home() {
   return (
-    <main className="h-full">
+    <main>
       <Scene />
-      <div className="grid grid-cols-1 md:grid-cols-3 place-items-center gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 place-items-center gap-5 bg-light-natural dark:bg-dark-natural">
         {posts.map((p, idx) => (
           <Link
             key={idx}
