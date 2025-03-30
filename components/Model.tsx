@@ -1,11 +1,11 @@
 import { useAnimations, useGLTF, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
-import { Group } from "three";
+import { Group, MeshStandardMaterial, Mesh, Color } from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useTheme } from "next-themes";
 
-// Register ScrollTrigger plugin
 gsap.registerPlugin(ScrollTrigger);
 
 const modelUrl =
@@ -23,6 +23,22 @@ export default function Model({ onScrollProgress }: ModelProps) {
   const { animations, scene } = useGLTF(modelUrl);
   const { actions } = useAnimations(animations, scene);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const { theme } = useTheme();
+  const originalMaterialsRef = useRef<{
+    screen: {
+      color: Color;
+      emissive: Color;
+      emissiveIntensity: number;
+    } | null;
+    body: {
+      color: Color;
+      emissive: Color;
+      emissiveIntensity: number;
+    } | null;
+  }>({
+    screen: null,
+    body: null,
+  });
 
   //@ts-ignore
   const action = actions["LTScreen|LTBase.001Action.001"];
@@ -43,12 +59,78 @@ export default function Model({ onScrollProgress }: ModelProps) {
     }
   }, [action]);
 
+  // Store original material properties
+  useEffect(() => {
+    if (!laptopRef.current) return;
+
+    laptopRef.current.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = child.material as MeshStandardMaterial;
+        if (material) {
+          if (
+            child.name.includes("Screen") &&
+            !originalMaterialsRef.current.screen
+          ) {
+            originalMaterialsRef.current.screen = {
+              color: material.color.clone(),
+              emissive: material.emissive.clone(),
+              emissiveIntensity: material.emissiveIntensity,
+            };
+          } else if (
+            !child.name.includes("Screen") &&
+            !originalMaterialsRef.current.body
+          ) {
+            originalMaterialsRef.current.body = {
+              color: material.color.clone(),
+              emissive: material.emissive.clone(),
+              emissiveIntensity: material.emissiveIntensity,
+            };
+          }
+        }
+      }
+    });
+  }, []);
+
+  // Update screen color based on theme
+  useEffect(() => {
+    if (!laptopRef.current || !originalMaterialsRef.current.screen) return;
+
+    laptopRef.current.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = child.material as MeshStandardMaterial;
+        if (material) {
+          if (child.name.includes("Screen")) {
+            if (theme === "dark") {
+              material.color.set("#1a1a1a");
+              material.emissive.set("#000000");
+              material.emissiveIntensity = 0;
+            } else {
+              // Reset to original screen material properties
+              material.color.set("#ffffff"); // Set to white in light mode
+              material.emissive.set("#ffffff"); // White emissive
+              material.emissiveIntensity = 0.5; // Subtle glow
+            }
+          } else if (child.name.includes("Body")) {
+            // Use theme-based colors for the body
+            if (theme === "dark") {
+              material.color.set("#000000");
+            } else {
+              material.color.set("#808080");
+            }
+            material.emissive.set("#000000");
+            material.emissiveIntensity = 1;
+          }
+        }
+      }
+    });
+  }, [theme]);
+
   useEffect(() => {
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: ".model-container",
         start: "top top",
-        end: "+=200%",
+        end: "+=150%",
         pin: true,
         anticipatePin: 1,
         onUpdate: (self) => {
