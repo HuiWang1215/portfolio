@@ -1,0 +1,232 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "React Deep Dive", 
+  title: "Chapter 6: Error Boundaries and Recovery",
+  description: "Understanding how React handles errors and recovers from them",
+  date: "2024-11-28",
+  category: "react",
+  slug: "react-deep-dive-chapter-6"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">React Deep Dive</div>
+## <div className="text-center">Chapter 6: Error Boundaries and Recovery</div>
+
+In the previous chapters, we've explored how <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-3" internal>Fiber handles reconciliation</TextHighlight>, <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-4" internal>manages priorities</TextHighlight>, and <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-5" internal>processes effects</TextHighlight>. Now, let's examine how React handles errors and recovers from them using error boundaries.
+
+## What are Error Boundaries?
+
+Error boundaries are React components that:
+1. Catch JavaScript errors anywhere in their child component tree
+2. Log those errors
+3. Display a fallback UI instead of the crashed component
+
+Here's a basic error boundary component:
+
+<CodeBlock language="javascript">
+{`class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error) {
+        // Update state to show fallback UI
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        // Log error to service
+        logErrorToService(error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return <h1>Something went wrong.</h1>;
+        }
+
+        return this.props.children;
+    }
+}`}
+</CodeBlock>
+
+## How Error Boundaries Work in Fiber
+
+Fiber handles errors through a process called <TextHighlight theme="default">error recovery</TextHighlight>:
+
+<CodeBlock language="javascript">
+{`function handleError(root, thrownValue) {
+    let erroredWork = workInProgress;
+    let returnFiber = erroredWork.return;
+
+    // Find the nearest error boundary
+    while (returnFiber !== null) {
+        if (returnFiber.tag === ErrorBoundaryComponent) {
+            // Found an error boundary
+            const errorBoundaryFiber = returnFiber;
+            const errorBoundaryInstance = errorBoundaryFiber.stateNode;
+            
+            // Call error boundary lifecycle methods
+            const errorState = errorBoundaryInstance.getDerivedStateFromError(thrownValue);
+            errorBoundaryInstance.componentDidCatch(thrownValue, {
+                componentStack: getStackByFiberInDevAndProd(erroredWork)
+            });
+            
+            // Mark the error boundary for update
+            errorBoundaryFiber.flags |= Update;
+            return;
+        }
+        returnFiber = returnFiber.return;
+    }
+    
+    // No error boundary found, mark root as failed
+    root.finishedWork = null;
+}`}
+</CodeBlock>
+
+## The Error Recovery Process
+
+1. **Error Detection**
+   - Errors are caught during render
+   - Errors are caught during commit
+   - Errors are caught during effects
+
+2. **Error Boundary Search**
+   - Fiber traverses up the tree
+   - Looks for error boundary components
+   - Stops at the first matching boundary
+
+3. **Recovery Steps**
+   - Update error boundary state
+   - Call error boundary lifecycle methods
+   - Render fallback UI
+   - Continue rendering unaffected parts
+
+## Error Handling in Different Phases
+
+### During Render
+
+<CodeBlock language="javascript">
+{`function renderRoot(root) {
+    try {
+        // Normal render process
+        workLoop();
+    } catch (thrownValue) {
+        // Handle error
+        handleError(root, thrownValue);
+        // Retry render with error boundary
+        renderRoot(root);
+    }
+}`}
+</CodeBlock>
+
+### During Commit
+
+<CodeBlock language="javascript">
+{`function commitRoot(root) {
+    try {
+        // Normal commit process
+        commitBeforeMutationEffects(root.finishedWork);
+        commitMutationEffects(root.finishedWork);
+        commitLayoutEffects(root.finishedWork);
+    } catch (thrownValue) {
+        // Handle error
+        handleError(root, thrownValue);
+        // Retry commit with error boundary
+        commitRoot(root);
+    }
+}`}
+</CodeBlock>
+
+## Error Boundary Best Practices
+
+1. **Granular Error Boundaries**
+   - Place error boundaries strategically
+   - Isolate critical components
+   - Prevent entire app crashes
+
+2. **Meaningful Fallbacks**
+   - Provide helpful error messages
+   - Include recovery options
+   - Maintain user context
+
+3. **Error Logging**
+   - Log errors to monitoring service
+   - Include component stack traces
+   - Track error frequency
+
+Here's a practical example:
+
+<CodeBlock language="javascript">
+{`function App() {
+    return (
+        <ErrorBoundary fallback={<ErrorFallback />}>
+            <Header />
+            <ErrorBoundary fallback={<DashboardError />}>
+                <Dashboard />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={<SidebarError />}>
+                <Sidebar />
+            </ErrorBoundary>
+        </ErrorBoundary>
+    );
+}`}
+</CodeBlock>
+
+## Benefits of Error Boundaries
+
+1. **Graceful Degradation**
+   - App continues to function
+   - Users see helpful error messages
+   - Critical features remain available
+
+2. **Isolated Failures**
+   - Errors don't crash the entire app
+   - Components can recover independently
+   - Better user experience
+
+3. **Better Debugging**
+   - Clear error boundaries
+   - Detailed error information
+   - Easier error tracking
+
+## Limitations of Error Boundaries
+
+Error boundaries don't catch errors in:
+1. Event handlers
+2. Asynchronous code
+3. Server-side rendering
+4. Errors thrown in the error boundary itself
+
+For these cases, we need to use try-catch blocks:
+
+<CodeBlock language="javascript">
+{`function Component() {
+    const handleClick = async () => {
+        try {
+            await riskyOperation();
+        } catch (error) {
+            // Handle error
+            logError(error);
+            showErrorUI();
+        }
+    };
+
+    return <button onClick={handleClick}>Click</button>;
+}`}
+</CodeBlock>
+
+This concludes our React Deep Dive series. We've covered:
+- The problems with pre-React 16
+- Introduction to Fiber
+- Reconciliation process
+- Priority management
+- Commit phase and effects
+- Error handling and recovery
+
+Each of these topics builds on the others to create a complete picture of how React works under the hood.
+
+</MdxLayout> 

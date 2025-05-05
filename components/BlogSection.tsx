@@ -1,62 +1,243 @@
 "use client";
 
-import { posts } from "@/posts";
-import Image from "next/image";
-import Link from "next/link";
-import ScrollFloat from "@/components/ScrollFloat";
+import { useEffect, useRef, useState } from "react";
 import useMounted from "@/hooks/useMounted";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import useSceneStore from "@/store/useSceneStore";
+import ScrollFloat from "./ScrollFloat";
+import Image from "next/image";
+
+// Register ScrollTrigger plugin
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function BlogSection() {
   const mounted = useMounted();
+  const sectionRef = useRef<HTMLElement>(null);
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
+  const isSceneLoaded = useSceneStore((state) => state.isLoaded);
+  const [isReady, setIsReady] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+
+  // Custom image sizes for each card
+  const imageSizes = [
+    { width: 450, height: 300 }, // First card - React logo
+    { width: 450, height: 300 }, // Second card - Daily life
+    { width: 450, height: 300 }, // Third card - Algorithms
+  ];
+
+  // Custom image display properties for each card
+  const imageDisplayProps = [
+    { objectFit: "contain", objectPosition: "center", padding: "2rem" }, // First card - React logo (smaller)
+    { objectFit: "cover", objectPosition: "center", padding: "0" }, // Second card - Daily life
+    { objectFit: "cover", objectPosition: "center", padding: "0" }, // Third card - Algorithms
+  ];
+
+  const blogPosts = [
+    {
+      id: 1,
+      title: "React Deep Dive",
+      subtitle: "How Fiber Powers Reconciliation & Rendering",
+      image: "/react-logo.svg",
+      link: "/blog/react/react-deep-dive-chapter-1",
+      category: "React",
+    },
+    {
+      id: 2,
+      title: "Daily Reflections",
+      subtitle: "Personal thoughts and insights from my everyday experiences",
+      image: "/daily-life.jpg",
+      link: "/blog/daily-reflections",
+      category: "Life",
+    },
+    {
+      id: 3,
+      title: "Algorithm Journey",
+      subtitle: "My learning path through data structures and algorithms",
+      image: "/algorithms.png",
+      link: "/blog/algorithm/heap",
+      category: "Programming",
+    },
+  ];
+
+  // Set ready state when Scene is loaded
+  useEffect(() => {
+    if (isSceneLoaded) {
+      setIsReady(true);
+    }
+  }, [isSceneLoaded]);
+
+  // Initialize animations only when ready
+  useEffect(() => {
+    if (!mounted || !isReady) return;
+
+    // Get all card elements
+    const cardElements = gsap.utils.toArray(".blog-card");
+
+    // Set initial positions
+    cardElements.forEach((card: any, index: number) => {
+      gsap.set(card, {
+        y: window.innerHeight,
+        opacity: 0,
+      });
+    });
+
+    // Create ScrollTrigger
+    scrollTriggerRef.current = ScrollTrigger.create({
+      trigger: sectionRef.current,
+      start: "top top",
+      end: "+=200%",
+      pin: true,
+      pinSpacing: true,
+      scrub: 1.5,
+      onUpdate: (self) => {
+        const progress = self.progress;
+        const totalCards = cardElements.length;
+        const progressPerCard = 1 / totalCards;
+
+        cardElements.forEach((card: any, index: number) => {
+          const cardStart = index * progressPerCard * 0.8;
+          let cardProgress = (progress - cardStart) / progressPerCard;
+          cardProgress = Math.min(Math.max(cardProgress, 0), 1);
+
+          let yPos = window.innerHeight * (1 - cardProgress);
+          let xPos = 0;
+
+          // Apply horizontal movement based on card index
+          if (index === 0) {
+            xPos = -window.innerWidth * 0.3 * cardProgress;
+          } else if (index === 1) {
+            xPos = 0;
+          } else if (index === 2) {
+            xPos = window.innerWidth * 0.3 * cardProgress;
+          }
+
+          gsap.to(card, {
+            y: yPos,
+            x: xPos,
+            opacity: cardProgress,
+            duration: 0,
+            ease: "none",
+          });
+        });
+      },
+    });
+
+    return () => {
+      // Clean up only our ScrollTrigger
+      if (scrollTriggerRef.current) {
+        scrollTriggerRef.current.kill();
+        scrollTriggerRef.current = null;
+      }
+      // Reset card positions
+      cardElements.forEach((card: any) => {
+        gsap.set(card, {
+          y: 0,
+          x: 0,
+          opacity: 1,
+        });
+      });
+    };
+  }, [mounted, isReady]);
+
+  // Handle card hover
+  const handleCardHover = (index: number | null) => {
+    setHoveredCard(index);
+
+    // Animate text elements
+    const cardElements = gsap.utils.toArray(".blog-card");
+    cardElements.forEach((card: any, idx: number) => {
+      const title = card.querySelector("h3");
+      const subtitle = card.querySelector("p");
+
+      if (idx === index) {
+        // Expand text on hover
+        gsap.to([title, subtitle], {
+          scale: 1.05,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      } else {
+        // Reset text scale
+        gsap.to([title, subtitle], {
+          scale: 1,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    });
+  };
+
+  if (!mounted || !isReady) return null;
 
   return (
-    <div className="blog-section">
-      {mounted && (
-        <ScrollFloat
-          containerClassName="flex justify-center items-center w-full"
-          textClassName="text-4xl font-bold text-light-primary dark:text-dark-primary"
-          animationDuration={0.5}
-          ease="back.inOut(2)"
-          stagger={0.1}
-        >
-          My Blog Posts
-        </ScrollFloat>
-      )}
-      <div className="blog-grid grid grid-cols-1 md:grid-cols-3 place-items-center gap-5 bg-light-natural dark:bg-dark-natural">
-        {posts.map((p, idx) => (
-          <Link
-            key={idx}
-            href={`/blog/${p.slug}`}
-            className="p-4 group rounded-lg border w-[392px] border-gray-200 dark:border-gray-700"
+    <section
+      ref={sectionRef}
+      className="blog-section h-[100dvh] flex flex-col py-20 overflow-hidden bg-gradient-to-b from-light-white/90 via-light-white/50 to-light-white dark:from-dark-black/90 dark:via-dark-black/50 dark:to-dark-black"
+    >
+      {mounted && isReady && (
+        <div className="w-full flex justify-center items-center">
+          <ScrollFloat
+            textClassName="font-bold text-light-primary dark:text-dark-primary"
+            animationDuration={0.8}
+            ease="back.out(1.7)"
+            stagger={0.05}
           >
-            {/* image */}
-            <div className="h-60 w-full relative overflow-hidden rounded-md object-cover group-hover:scale-105 duration-300 transition-all">
-              <Image
-                src={p.thumbnail}
-                alt={`${p.title} - thumbnail`}
-                sizes="100vh"
-                fill
-              />
-            </div>
-
-            {/* category */}
-            <p className="text-sm bg-gray-100 dark:bg-gray-700/95 text-blue-700 dark:text-blue-500 font-semibold my-4 w-fit px-2 py-1 rounded-sm">
-              {p.category}
-            </p>
-
-            {/* title */}
-            <h2 className="text-2xl leading-7 font-bold py-1 line-clamp-2">
-              {p.title}
-            </h2>
-
-            {/* author and date */}
-            <div className="text-gray-500 flex text-base space-x-10 py-3">
-              <div>{p.author}</div>
-              <div>{p.date}</div>
-            </div>
-          </Link>
-        ))}
+            My Blog Posts
+          </ScrollFloat>
+        </div>
+      )}
+      <div className="w-full max-w-6xl mx-auto flex flex-col items-center justify-center flex-grow">
+        <div className="blog-grid grid grid-cols-1 md:grid-cols-3 place-items-center gap-5 w-full p-8 relative">
+          {blogPosts.map((post, idx) => (
+            <a
+              href={post.link}
+              key={idx}
+              className={`blog-card p-6 rounded-lg border w-[450px] h-[500px] border-gray-200 dark:border-gray-700 bg-light-neutral dark:bg-dark-neutral absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
+                hoveredCard === idx
+                  ? "scale-110 shadow-xl z-10"
+                  : "hover:shadow-lg"
+              }`}
+              onMouseEnter={() => handleCardHover(idx)}
+              onMouseLeave={() => handleCardHover(null)}
+            >
+              <div
+                className="w-full bg-light-white/50 dark:bg-dark-black/50 rounded-md mb-6 relative overflow-hidden"
+                style={{ height: `${imageSizes[idx].height}px` }}
+              >
+                <Image
+                  src={post.image}
+                  alt={post.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 450px"
+                  className={`transition-transform duration-300 ${
+                    hoveredCard === idx ? "scale-105" : ""
+                  }`}
+                  style={{
+                    objectFit: imageDisplayProps[idx].objectFit as any,
+                    objectPosition: imageDisplayProps[idx].objectPosition,
+                    padding: imageDisplayProps[idx].padding,
+                  }}
+                  priority={idx === 0}
+                />
+              </div>
+              <div className="px-4">
+                <span className="text-base font-medium text-light-primary dark:text-dark-secondary mb-3 block">
+                  {post.category}
+                </span>
+                <h3 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white transform origin-left">
+                  {post.title}
+                </h3>
+                <p className="text-base text-gray-600 dark:text-gray-300 transform origin-left">
+                  {post.subtitle}
+                </p>
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

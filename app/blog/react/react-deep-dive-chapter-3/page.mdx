@@ -1,0 +1,215 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "React Deep Dive", 
+  title: "Chapter 3: Fiber's Reconciliation Process",
+  description: "Chapter 3: Fiber's Reconciliation Process",
+  date: "2024-11-28",
+  category: "react",
+  slug: "react-deep-dive-chapter-3"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">React Deep Dive</div>
+## <div className="text-center">Chapter 3: Fiber's Reconciliation Process</div>
+
+In the previous chapter, we learned how Fiber breaks rendering work into small units. Now, let's explore how Fiber handles updates and reconciliation. The key to understanding this process is the concept of the <TextHighlight theme="default">workInProgress</TextHighlight> tree.
+
+## The Two Trees
+
+Fiber maintains two trees during the reconciliation process:
+
+1. **Current Tree**: The tree that's currently rendered on the screen
+2. **WorkInProgress Tree**: The tree being built for the next render
+
+<CodeBlock language="javascript">
+{`// Simplified representation of the two trees
+let currentTree = null;      // The current tree
+let workInProgressTree = null;  // The tree being built
+
+function createWorkInProgress(current, pendingProps) {
+    let workInProgress = current.alternate;
+    if (workInProgress === null) {
+        // Create a new fiber if we don't have one
+        workInProgress = createFiber(
+            current.type,
+            pendingProps,
+            current.key
+        );
+        workInProgress.alternate = current;
+        current.alternate = workInProgress;
+    } else {
+        // Reuse the existing fiber
+        workInProgress.pendingProps = pendingProps;
+        workInProgress.effectTag = NoEffect;
+        workInProgress.nextEffect = null;
+        workInProgress.firstEffect = null;
+        workInProgress.lastEffect = null;
+    }
+    return workInProgress;
+}`}
+</CodeBlock>
+
+## The Reconciliation Process
+
+The reconciliation process follows these steps:
+
+1. **Begin Work**: Start building the workInProgress tree
+2. **Complete Work**: Finish processing a fiber node
+3. **Commit Work**: Apply changes to the DOM
+
+Here's how it works:
+
+<CodeBlock language="javascript">
+{`function beginWork(current, workInProgress, renderLanes) {
+    // 1. Check if we can reuse the current fiber
+    if (current !== null) {
+        const oldProps = current.memoizedProps;
+        const newProps = workInProgress.pendingProps;
+        
+        if (oldProps !== newProps) {
+            // Props changed, mark for update
+            workInProgress.effectTag |= Update;
+        }
+    }
+
+    // 2. Process the fiber based on its type
+    switch (workInProgress.tag) {
+        case FunctionComponent:
+            return updateFunctionComponent(current, workInProgress);
+        case HostComponent:
+            return updateHostComponent(current, workInProgress);
+        // ... other cases
+    }
+}
+
+function completeWork(current, workInProgress) {
+    const newProps = workInProgress.pendingProps;
+
+    switch (workInProgress.tag) {
+        case HostComponent: {
+            // Create or update DOM node
+            if (current !== null && workInProgress.stateNode != null) {
+                // Update existing node
+                updateHostComponent(current, workInProgress);
+            } else {
+                // Create new node
+                const instance = createInstance(workInProgress.type, newProps);
+                workInProgress.stateNode = instance;
+            }
+            break;
+        }
+        // ... other cases
+    }
+}`}
+</CodeBlock>
+
+## Effect List
+
+Fiber maintains an effect list to track which nodes need updates:
+
+<CodeBlock language="javascript">
+{`function completeUnitOfWork(unitOfWork) {
+    let completedWork = unitOfWork;
+    do {
+        const current = completedWork.alternate;
+        const returnFiber = completedWork.return;
+
+        // Append effects to the effect list
+        if (returnFiber !== null && (completedWork.effectTag & Incomplete) === NoEffect) {
+            if (returnFiber.firstEffect === null) {
+                returnFiber.firstEffect = completedWork.firstEffect;
+            }
+            if (completedWork.lastEffect !== null) {
+                if (returnFiber.lastEffect !== null) {
+                    returnFiber.lastEffect.nextEffect = completedWork.firstEffect;
+                }
+                returnFiber.lastEffect = completedWork.lastEffect;
+            }
+        }
+    } while (completedWork !== null);
+}`}
+</CodeBlock>
+
+## The Commit Phase
+
+After the workInProgress tree is complete, React enters the commit phase:
+
+<CodeBlock language="javascript">
+{`function commitRoot(root) {
+    const finishedWork = root.finishedWork;
+    
+    // 1. Commit all the side effects
+    commitMutationEffects(finishedWork);
+    
+    // 2. Switch the current and workInProgress trees
+    root.current = finishedWork;
+    
+    // 3. Commit layout effects
+    commitLayoutEffects(finishedWork);
+}`}
+</CodeBlock>
+
+This is a simplified view of the commit phase. In <TextHighlight theme="code" href="/blog/react/react-deep-dive-chapter-5" internal>Chapter 5</TextHighlight>, we'll dive deeper into:
+- How React handles different types of effects
+- The three sub-phases of the commit phase
+- How React ensures consistency during commits
+- The role of layout effects and their timing
+
+## Benefits of This Approach
+
+1. **Incremental Updates**: Changes can be applied incrementally without blocking the main thread
+2. **Consistent UI**: The current tree remains stable while the workInProgress tree is being built
+3. **Optimized Performance**: Only necessary updates are applied to the DOM
+4. **Better Error Handling**: If an error occurs, we can fall back to the current tree
+
+## Example: Updating a Component
+
+Let's see how this works in practice with a state update:
+
+<CodeBlock language="javascript">
+{`function Counter() {
+    const [count, setCount] = useState(0);
+    
+    return (
+        <div>
+            <p>Count: {count}</p>
+            <button onClick={() => setCount(count + 1)}>
+                Increment
+            </button>
+        </div>
+    );
+}`}
+</CodeBlock>
+
+When the button is clicked, here's what happens:
+
+1. **State Update Triggered**
+   - <TextHighlight theme="code">setCount</TextHighlight> is called, triggering a state update
+   - React schedules a re-render for the component
+
+2. **WorkInProgress Tree Creation**
+   - React creates a new workInProgress tree
+   - The tree is built incrementally, one fiber at a time
+
+3. **Reconciliation Process**
+   - The Counter fiber is marked for update
+   - The text node containing the count is marked for update
+   - Other nodes (div, button, etc.) are reused without changes
+
+4. **Commit Phase**
+   - The new count value is committed to the DOM
+   - The workInProgress tree becomes the current tree
+   - The UI reflects the updated count
+
+This example shows how Fiber:
+1. Handles state updates efficiently by only updating what changed
+2. Maintains consistency between the current and workInProgress trees
+3. Optimizes performance by reusing unchanged parts of the tree
+4. Ensures smooth updates without blocking the main thread
+
+In the next chapter, we'll explore how Fiber handles different types of updates and priorities.
+
+</MdxLayout>

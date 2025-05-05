@@ -19,11 +19,10 @@ interface ModelProps {
 
 export default function Model({ onScrollProgress }: ModelProps) {
   const laptopRef = useRef<Group>(null);
-  const [error, setError] = useState<string | null>(null);
   const { animations, scene } = useGLTF(modelUrl);
   const { actions } = useAnimations(animations, scene);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const originalMaterialsRef = useRef<{
     screen: {
       color: Color;
@@ -44,7 +43,7 @@ export default function Model({ onScrollProgress }: ModelProps) {
   const action = actions["LTScreen|LTBase.001Action.001"];
 
   useEffect(() => {
-    if (!action) return;
+    if (!action || !resolvedTheme) return;
 
     // Set up the action
     action.play();
@@ -57,80 +56,71 @@ export default function Model({ onScrollProgress }: ModelProps) {
     if (laptopRef.current) {
       laptopRef.current.scale.set(150, 150, 75); // Increased scale further
     }
-  }, [action]);
+  }, [action, resolvedTheme]);
 
-  // Store original material properties
+  // Store original material properties and update colors based on theme
   useEffect(() => {
-    if (!laptopRef.current) return;
+    if (!laptopRef.current || !resolvedTheme) return;
 
-    laptopRef.current.traverse((child) => {
-      if (child instanceof Mesh) {
-        const material = child.material as MeshStandardMaterial;
-        if (material) {
-          if (
-            child.name.includes("Screen") &&
-            !originalMaterialsRef.current.screen
-          ) {
-            originalMaterialsRef.current.screen = {
-              color: material.color.clone(),
-              emissive: material.emissive.clone(),
-              emissiveIntensity: material.emissiveIntensity,
-            };
-          } else if (
-            !child.name.includes("Screen") &&
-            !originalMaterialsRef.current.body
-          ) {
-            originalMaterialsRef.current.body = {
-              color: material.color.clone(),
-              emissive: material.emissive.clone(),
-              emissiveIntensity: material.emissiveIntensity,
-            };
-          }
-        }
-      }
-    });
-  }, []);
-
-  // Update screen color based on theme
-  useEffect(() => {
-    if (!laptopRef.current || !originalMaterialsRef.current.screen) return;
-
-    laptopRef.current.traverse((child) => {
-      if (child instanceof Mesh) {
-        const material = child.material as MeshStandardMaterial;
-        if (material) {
-          if (child.name.includes("Screen")) {
-            if (theme === "dark") {
-              material.color.set("#1a1a1a");
+    const updateMaterials = () => {
+      laptopRef.current?.traverse((child) => {
+        if (child instanceof Mesh) {
+          const material = child.material as MeshStandardMaterial;
+          if (material) {
+            if (child.name.includes("Screen")) {
+              if (!originalMaterialsRef.current.screen) {
+                originalMaterialsRef.current.screen = {
+                  color: material.color.clone(),
+                  emissive: material.emissive.clone(),
+                  emissiveIntensity: material.emissiveIntensity,
+                };
+              }
+              if (resolvedTheme === "dark") {
+                material.color.set("#1a1a1a");
+                material.emissive.set("#000000");
+                material.emissiveIntensity = 0;
+              } else {
+                material.color.set("#ffffff");
+                material.emissive.set("#ffffff");
+                material.emissiveIntensity = 0.5;
+              }
+            } else if (!child.name.includes("Screen")) {
+              if (!originalMaterialsRef.current.body) {
+                originalMaterialsRef.current.body = {
+                  color: material.color.clone(),
+                  emissive: material.emissive.clone(),
+                  emissiveIntensity: material.emissiveIntensity,
+                };
+              }
+              if (resolvedTheme === "dark") {
+                material.color.set("#000000");
+              } else {
+                material.color.set("#808080");
+              }
               material.emissive.set("#000000");
-              material.emissiveIntensity = 0;
-            } else {
-              // Reset to original screen material properties
-              material.color.set("#ffffff"); // Set to white in light mode
-              material.emissive.set("#ffffff"); // White emissive
-              material.emissiveIntensity = 0.5; // Subtle glow
+              material.emissiveIntensity = 1;
             }
-          } else if (child.name.includes("Body")) {
-            // Use theme-based colors for the body
-            if (theme === "dark") {
-              material.color.set("#000000");
-            } else {
-              material.color.set("#808080");
-            }
-            material.emissive.set("#000000");
-            material.emissiveIntensity = 1;
           }
         }
-      }
-    });
-  }, [theme]);
+      });
+    };
+
+    // Run immediately
+    updateMaterials();
+
+    // Also run when theme changes
+    return () => {
+      updateMaterials();
+    };
+  }, [resolvedTheme]);
 
   useEffect(() => {
+    // Create a timeline with ScrollTrigger
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: ".model-container",
         start: "top top",
-        end: "+=150%",
+        end: "+=200%",
         pin: true,
         anticipatePin: 1,
         onUpdate: (self) => {
@@ -145,10 +135,28 @@ export default function Model({ onScrollProgress }: ModelProps) {
       },
     });
 
+    // Force an initial update to sync with current scroll position
+    if (window.scrollY > 0) {
+      const scrollY = window.scrollY;
+      const container = document.querySelector(".model-container");
+      if (container) {
+        const containerHeight = container.clientHeight;
+        const progress = scrollY / (containerHeight * 2); // 200% of container height
+        tl.progress(Math.min(Math.max(progress, 0), 1));
+      }
+    }
+
     return () => {
+      // Clean up the timeline and ScrollTrigger
       if (tl) {
         tl.kill();
       }
+      // Also kill any ScrollTrigger instances associated with this timeline
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (trigger.vars.trigger === ".model-container") {
+          trigger.kill();
+        }
+      });
     };
   }, [action, onScrollProgress]);
 
@@ -169,38 +177,6 @@ export default function Model({ onScrollProgress }: ModelProps) {
     const yPosition = -20 + scrollProgress * 15; // Back to original movement but will take longer due to longer scroll
     laptopRef.current.parent.position.y = yPosition;
   });
-
-  if (error) {
-    return (
-      <Html center>
-        <div
-          style={{
-            background: "rgba(255,0,0,0.1)",
-            padding: "20px",
-            borderRadius: "5px",
-            color: "red",
-            textAlign: "center",
-          }}
-        >
-          <p>Error loading model: {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              marginTop: "10px",
-              padding: "8px 16px",
-              background: "#ff4444",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      </Html>
-    );
-  }
 
   return (
     <group position={[0, -20, 0]}>

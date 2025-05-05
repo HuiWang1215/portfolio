@@ -104,11 +104,11 @@ export default function TypewriterText({
 
   return (
     <div className={`${className} flex flex-col`}>
-      <span className="inline-block mt-4 sm:mt-14">
+      <span className="inline-block mt-4 sm:mt-14 text-dark-black dark:text-light-white">
         {firstText}
         {!isFirstComplete && <span className="animate-pulse">|</span>}
       </span>
-      <span className="inline-block mt-4 sm:mt-14">
+      <span className="inline-block mt-4 sm:mt-14 text-dark-black dark:text-light-white">
         {secondText}
         {isFirstComplete && <span className="animate-pulse">|</span>}
       </span>

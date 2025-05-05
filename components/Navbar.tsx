@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import GlitchText from "./GlitchText";
 import GradientButton from "./GradientButton";
 import { useEffect, useRef } from "react";
+import NavLink from "./NavLink";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
@@ -44,35 +43,32 @@ export default function Navbar() {
         <div className="flex justify-between items-end pb-4">
           {/* Left side - Name */}
           <div className="flex items-end">
-            <Link href="/" className="flex-shrink-0">
-              <GlitchText
-                speed={1}
-                enableShadows={true}
-                enableOnHover={true}
+            <div className="flex items-center space-x-3">
+              <NavLink
+                href="/"
+                text="J"
                 size="4xl"
+                speed={0.3}
+                className="font-bold text-4xl sm:text-4xl lg:text-5xl text-light-primary dark:text-dark-primary hover:text-light-accent dark:hover:text-dark-accent transition-colors [text-shadow:1px_1px_0_black,_-1px_1px_0_black,_1px_-1px_0_black,_-1px_-1px_0_black] dark:[text-shadow:1px_1px_0_white,_-1px_1px_0_white,_1px_-1px_0_white,_-1px_-1px_0_white] transform [rotate:8deg] hover:[rotate:0deg] transition-transform duration-300"
                 hoverClassName="text-4xl sm:text-4xl lg:text-5xl font-bold text-light-accent dark:text-dark-accent transition-colors"
-                className="font-bold text-4xl sm:text-4xl lg:text-5xl text-light-primary dark:text-dark-primary hover:text-light-accent dark:hover:text-dark-accent transition-colors [text-shadow:1px_1px_0_black,_-1px_1px_0_black,_1px_-1px_0_black,_-1px_-1px_0_black] dark:[text-shadow:1px_1px_0_white,_-1px_1px_0_white,_1px_-1px_0_white,_-1px_-1px_0_white]"
-              >
-                Jonny Wang
-              </GlitchText>
-            </Link>
+              />
+              <NavLink
+                href="/"
+                text="W"
+                size="4xl"
+                speed={0.3}
+                className="font-bold text-4xl sm:text-4xl lg:text-5xl text-light-primary dark:text-dark-primary hover:text-light-accent dark:hover:text-dark-accent transition-colors [text-shadow:1px_1px_0_black,_-1px_1px_0_black,_1px_-1px_0_black,_-1px_-1px_0_black] dark:[text-shadow:1px_1px_0_white,_-1px_1px_0_white,_1px_-1px_0_white,_-1px_-1px_0_white] transform [rotate:-8deg] hover:[rotate:0deg] transition-transform duration-300"
+                hoverClassName="text-4xl sm:text-4xl lg:text-5xl font-bold text-light-accent dark:text-dark-accent transition-colors"
+              />
+            </div>
           </div>
 
           {/* Right side - Blog and Theme button */}
           <div className="flex items-center space-x-8 pr-2 sm:px-4 lg:pr-8">
-            <Link href="/blog" className="flex-shrink-0">
-              <GlitchText
-                speed={1}
-                enableShadows={true}
-                enableOnHover={true}
-                size="2xl"
-                hoverClassName="text-2xl font-bold text-light-accent dark:text-dark-accent transition-colors"
-                className="font-bold text-dark-black dark:text-light-white hover:text-light-neutral dark:hover:text-dark-neutral transition-colors"
-              >
-                Blog
-              </GlitchText>
-            </Link>
-            <GradientButton animationSpeed={3} />
+            <NavLink href="/" text="Home" size="2xl" />
+            <NavLink href="/blog" text="Blog" size="2xl" />
+            <NavLink href="/about" text="About" size="2xl" />
+            <GradientButton animationSpeed={2} />
           </div>
         </div>
       </div>

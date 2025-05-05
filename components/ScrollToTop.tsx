@@ -32,12 +32,16 @@ export default function ScrollToTop() {
           pointerEvents: self.progress > 0.5 ? "auto" : "none",
           duration: 0.3,
           ease: "power2.out",
+          markers: true,
         });
       },
     });
 
     return () => {
-      scrollTrigger.kill();
+      // Clean up the ScrollTrigger
+      if (scrollTrigger) {
+        scrollTrigger.kill();
+      }
     };
   }, [pathname]); // Re-run effect when pathname changes
 

@@ -1,43 +1,32 @@
-import { posts } from "@/posts";
-import Image from "next/image";
+import { postsByCategory } from "@/posts";
 import Link from "next/link";
 
-export default function page() {
+export default function BlogPage() {
   return (
-    <div className="pt-20 bg-gradient-light dark:bg-gradient-dark">
-      <div className="grid grid-cols-1 md:grid-cols-3 place-items-center gap-5">
-        {posts.map((p, idx) => (
-          <Link
-            key={idx}
-            href={`/blog/${p.slug}`}
-            className="p-4 group rounded-lg border w-[392px] border-light-neutral dark:border-dark-neutral bg-light-secondary dark:bg-dark-primary"
-          >
-            {/* image */}
-            <div className="h-60 w-full relative overflow-hidden rounded-md object-cover group-hover:scale-105 duration-300 transition-all">
-              <Image
-                src={p.thumbnail}
-                alt={`${p.title} - thumbnail`}
-                sizes="100vh"
-                fill
-              />
-            </div>
-
-            {/* category */}
-            <p className="text-sm bg-light-accent dark:bg-dark-accent text-light-primary dark:text-dark-secondary font-semibold my-4 w-fit px-2 py-1 rounded-sm">
-              {p.category}
-            </p>
-
-            {/* title */}
-            <h2 className="text-2xl leading-7 font-bold py-1 line-clamp-2 text-light-primary dark:text-dark-secondary">
-              {p.title}
+    <div className="bg-gradient-light dark:bg-gradient-dark min-h-screen">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8 pt-20">
+        {Object.entries(postsByCategory).map(([category, posts]) => (
+          <section key={category} className="mb-12">
+            <h2 className="text-3xl font-semibold mb-4 text-light-primary dark:text-dark-primary capitalize">
+              {category}
             </h2>
-
-            {/* author and date */}
-            <div className="text-light-neutral dark:text-dark-neutral flex text-base space-x-10 py-3">
-              <div>{p.author}</div>
-              <div>{p.date}</div>
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/blog/${category}/${post.slug}`}
+                  className="block p-6 rounded-lg bg-light-neutral dark:bg-dark-neutral hover:bg-light-accent/10 dark:hover:bg-dark-accent/10 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl shadow-lg"
+                >
+                  <h3 className="text-xl font-semibold mb-2 text-black dark:text-white transition-transform duration-300 group-hover:scale-[1.02]">
+                    {post.title}
+                  </h3>
+                  <p className="text-black/80 dark:text-white/80 transition-transform duration-300 group-hover:scale-[1.02]">
+                    {post.description}
+                  </p>
+                </Link>
+              ))}
             </div>
-          </Link>
+          </section>
         ))}
       </div>
     </div>

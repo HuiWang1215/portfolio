@@ -1,0 +1,192 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "React Deep Dive", 
+  title: "Chapter 5: The Commit Phase and Effects",
+  description: "Understanding React's commit phase and the effects system",
+  date: "2024-11-28",
+  category: "react",
+  slug: "react-deep-dive-chapter-5"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">React Deep Dive</div>
+## <div className="text-center">Chapter 5: The Commit Phase and Effects</div>
+
+In the previous chapters, we've seen how <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-3" internal>Fiber builds the workInProgress tree</TextHighlight> and how it <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-4" internal>manages priorities</TextHighlight>. Now, let's explore the final phase of the rendering process: the commit phase, where React applies changes to the DOM and handles effects.
+
+## The Three Sub-Phases of Commit
+
+The commit phase is divided into three sub-phases, each with a specific responsibility:
+
+1. **Before Mutation Phase**
+   - Snapshot the current state
+   - Prepare for DOM updates
+   - Schedule passive effects
+
+2. **Mutation Phase**
+   - Apply DOM updates
+   - Call unmount effects
+   - Update refs
+
+3. **Layout Phase**
+   - Call layout effects
+   - Update refs again
+   - Schedule passive effects
+
+Here's how these phases are structured in React's code:
+
+<CodeBlock language="javascript">
+{`function commitRoot(root) {
+    const finishedWork = root.finishedWork;
+    
+    // Before Mutation Phase
+    commitBeforeMutationEffects(finishedWork);
+    
+    // Mutation Phase
+    commitMutationEffects(finishedWork);
+    
+    // Switch the current and workInProgress trees
+    root.current = finishedWork;
+    
+    // Layout Phase
+    commitLayoutEffects(finishedWork);
+}`}
+</CodeBlock>
+
+## Understanding Effects
+
+React has several types of effects, each with different timing and purposes:
+
+1. **Layout Effects** (Synchronous)
+   - Run synchronously after DOM mutations
+   - Block visual updates
+   - Used for measurements and DOM updates
+
+2. **Passive Effects** (Asynchronous)
+   - Run asynchronously after paint
+   - Don't block visual updates
+   - Used for subscriptions, data fetching, etc.
+
+Here's how effects are structured in a fiber node:
+
+<CodeBlock language="javascript">
+{`type Fiber = {
+    // ... other properties
+    flags: number,           // Effect flags
+    firstEffect: Fiber | null,  // First effect in the list
+    lastEffect: Fiber | null,   // Last effect in the list
+    nextEffect: Fiber | null,   // Next effect to process
+};`}
+</CodeBlock>
+
+## How useEffect Works
+
+Let's break down how <TextHighlight theme="code">useEffect</TextHighlight> works under the hood:
+
+<CodeBlock language="javascript">
+{`function updateEffect(create, deps) {
+    const hook = updateWorkInProgressHook();
+    const nextDeps = deps === undefined ? null : deps;
+    let destroy = undefined;
+
+    if (currentHook !== null) {
+        const prevEffect = currentHook.memoizedState;
+        destroy = prevEffect.destroy;
+        
+        if (nextDeps !== null) {
+            const prevDeps = prevEffect.deps;
+            if (areHookInputsEqual(nextDeps, prevDeps)) {
+                // Skip effect if deps haven't changed
+                pushEffect(NoHookEffect, create, destroy, nextDeps);
+                return;
+            }
+        }
+    }
+
+    // Schedule effect for commit phase
+    hook.memoizedState = pushEffect(
+        HookHasEffect | HookPassive,
+        create,
+        destroy,
+        nextDeps
+    );
+}`}
+</CodeBlock>
+
+## Effect Execution Flow
+
+1. **During Render**
+   - Effects are collected in the effect list
+   - Each effect is tagged with its type and priority
+   - Dependencies are compared to determine if effect should run
+
+2. **During Commit**
+   - Before Mutation: Schedule passive effects
+   - Mutation: Run cleanup functions
+   - Layout: Run layout effects
+   - After Paint: Run passive effects
+
+Here's a practical example:
+
+<CodeBlock language="javascript">
+{`function Example() {
+    // Layout effect - runs synchronously after DOM updates
+    useLayoutEffect(() => {
+        // Measure DOM node
+        const height = elementRef.current.getBoundingClientRect().height;
+        // Update DOM immediately
+        elementRef.current.style.height = \`\${height}px\`;
+    }, []);
+
+    // Passive effect - runs asynchronously after paint
+    useEffect(() => {
+        // Subscribe to data
+        const subscription = dataSource.subscribe();
+        // Cleanup subscription
+        return () => subscription.unsubscribe();
+    }, []);
+
+    return <div ref={elementRef}>Content</div>;
+}`}
+</CodeBlock>
+
+## Effect Flags and Priorities
+
+React uses flags to track different types of effects:
+
+<CodeBlock language="javascript">
+{`const EffectFlags = {
+    NoFlags: 0,
+    Placement: 1,        // New node
+    Update: 2,           // Update existing node
+    Deletion: 4,         // Remove node
+    Passive: 8,          // Passive effect
+    Layout: 16,          // Layout effect
+    Ref: 32,             // Ref update
+    Snapshot: 64,        // Snapshot effect
+};`}
+</CodeBlock>
+
+## Benefits of This Approach
+
+1. **Predictable Updates**
+   - DOM updates happen in a consistent order
+   - Effects run at the right time
+   - Visual updates are synchronized
+
+2. **Performance Optimization**
+   - Effects are batched when possible
+   - Passive effects don't block rendering
+   - Cleanup functions prevent memory leaks
+
+3. **Developer Experience**
+   - Clear separation of concerns
+   - Predictable effect timing
+   - Easy to reason about updates
+
+In the next chapter, we'll explore how React handles error boundaries and recovery from errors during the rendering process.
+
+</MdxLayout> 

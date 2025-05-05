@@ -1,0 +1,194 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "React Deep Dive", 
+  title: "Chapter 1: The Problems with Pre-React 16",
+  description: "Chapter 1: The Problems with Pre-React 16",
+  date: "2024-11-28",
+  category: "react",
+  slug: "react-deep-dive-chapter-1"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">React Deep Dive</div>
+## <div className="text-center">Chapter 1: The Problems with Pre-React 16</div>
+
+I remember when I first looked at my job's projects and saw the <TextHighlight theme="danger">UNSAFE_</TextHighlight> prefix on <TextHighlight theme="code">componentWillMount</TextHighlight>, <TextHighlight theme="code">componentWillReceiveProps</TextHighlight>, and <TextHighlight theme="code">componentWillUpdate</TextHighlight>. 
+I had no idea what they were, so I hovered over them and read the comments above them. Unfortunately, I still couldn't understand them at all. 
+This gap in understanding became the driving force behind my deep dive into React's architecture. 
+
+After working with React for several years and studying its internals, I've come to understand the why, what, and how behind React's design. By writing this blog, I aim to solidify my knowledge while hopefully helping others navigate React's core concepts more clearly.
+
+## What does JSX convert to?
+<div className="flex gap-4">
+<CodeBlock language="jsx" className="flex-1">
+{`// JSX Syntax
+function App() {
+    return (
+        <div className="app">
+            <h1>Hello React!</h1>
+            <p>This is a paragraph</p>
+        </div>
+    );
+}`}
+</CodeBlock>
+
+<CodeBlock language="javascript" className="flex-1">
+{`// Compiled JavaScript
+function App() {
+    return React.createElement(
+        'div',
+        { className: 'app' },
+        [
+            React.createElement('h1', null, 'Hello React!'),
+            React.createElement('p', null, 'This is a paragraph')
+        ]
+    );
+}`}
+</CodeBlock>
+</div>
+
+JSX is transformed to JavaScript by build tools like Babel. The transformation replaces the code inside the tags with a call to <TextHighlight theme="code">createElement</TextHighlight>, passing the tag name, the props, and the children as parameters.
+
+Starting from React 17, Babel uses a new JSX transform that uses <TextHighlight theme="code">_jsx</TextHighlight> instead of <TextHighlight theme="code">React.createElement</TextHighlight>. Let's look at a direct comparison using our example:
+
+<CodeBlock language="javascript">
+{`// React.createElement (Pre-React 17)
+function App() {
+    return React.createElement(
+        'div',
+        { className: 'app' },
+        [
+            React.createElement('h1', null, 'Hello React!'),
+            React.createElement('p', null, 'This is a paragraph')
+        ]
+    );
+}
+
+// _jsx (React 17+)
+function App() {
+    return _jsx("div", {
+        className: "app",
+        children: [
+            _jsx("h1", {
+                children: "Hello React!"
+            }),
+            _jsx("p", {
+                children: "This is a paragraph"
+            })
+        ]
+    });
+}`}
+</CodeBlock>
+
+The new transform has several advantages:
+1. It's more performant as it doesn't need to create intermediate arrays for children
+2. It automatically imports the necessary functions, so you don't need to import React just to use JSX
+3. It produces cleaner and more readable code
+
+Both transforms ultimately create the same element object structure that we will discuss later. The main difference is in how they get there and their runtime performance.
+For now we can just stick to <TextHighlight theme="code">React.createElement</TextHighlight>.
+
+## What does React.createElement return?
+
+The <TextHighlight theme="code">React.createElement</TextHighlight> function returns a plain JavaScript object that represents a React element. This object has a specific structure that React uses to build the DOM. Here's what the element object looks like for our example:
+
+<CodeBlock language="javascript">
+{`{
+    type: 'div',
+    props: {
+        className: 'app',
+        children: [
+            {
+                type: 'h1',
+                props: {
+                    children: [
+                        {
+                            type: 'TEXT_ELEMENT',
+                            props: {
+                                nodeValue: 'Hello React!',
+                                children: []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                type: 'p',
+                props: {
+                    children: [
+                        {
+                            type: 'TEXT_ELEMENT',
+                            props: {
+                                nodeValue: 'This is a paragraph',
+                                children: []
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}`}
+</CodeBlock>
+When dealing with primitive values like strings or numbers, React wraps them in a special element type called <TextHighlight theme="code">TEXT_ELEMENT</TextHighlight>.
+The <TextHighlight theme="code">TEXT_ELEMENT</TextHighlight> is a special type that React uses internally to handle text nodes. In the render function, when it encounters a <TextHighlight theme="code">TEXT_ELEMENT</TextHighlight>, it creates a text node using <TextHighlight theme="code">document.createTextNode()</TextHighlight> instead of a regular DOM element.
+
+This element object is what gets passed to the <TextHighlight theme="code">render</TextHighlight> function. It's a lightweight description of what should appear on the screen, containing:
+- **type**: The type of the element (either a string for HTML elements or a function/class for components)
+- **props**: An object containing all the properties, including <TextHighlight theme="code">children</TextHighlight> which can be a string, number, or an array of more element objects
+
+## From JavaScript to DOM
+
+Once we have our JavaScript element, we need to render it to the DOM. This typically happens with:
+
+<CodeBlock language="javascript">
+{`const element = <App />;
+const container = document.getElementById("root");
+ReactDOM.render(element, container);`}
+</CodeBlock>
+
+The <TextHighlight theme="code">render</TextHighlight> function is responsible for creating the actual DOM nodes and appending them to the container. Here's a simplified version of how it works:
+
+<CodeBlock language="javascript">
+{`function render(element, container) {
+    const dom =
+      element.type == "TEXT_ELEMENT"
+        ? document.createTextNode("")
+        : document.createElement(element.type)
+
+    const isProperty = key => key !== "children"
+    Object.keys(element.props)
+      .filter(isProperty)
+      .forEach(name => {
+        dom[name] = element.props[name]
+      })
+
+    element.props.children.forEach(child =>
+      render(child, dom)
+    )
+
+    container.appendChild(dom)
+}`}
+</CodeBlock>
+
+## The Problem with Recursive Rendering
+
+This implementation has a critical flaw: it uses recursive calls to render the entire element tree. The <TextHighlight theme="code">render</TextHighlight> function will keep calling itself for each child element until the entire tree is built. This means:
+
+1. The main thread is blocked until the entire tree is rendered
+2. If the tree is large, it can cause the UI to become unresponsive
+3. There's no way to pause or interrupt the rendering process
+4. High-priority updates (like user input) have to wait for the entire tree to be rendered
+
+This was a fundamental limitation in React versions before 16. The recursive nature of the render process made it impossible to implement features like:
+- Concurrent rendering
+- Time-slicing
+- Suspense
+- Priority-based updates
+
+In the next chapter, we'll explore how React 16's Fiber architecture solved these problems by introducing an interruptible rendering process.
+
+</MdxLayout>

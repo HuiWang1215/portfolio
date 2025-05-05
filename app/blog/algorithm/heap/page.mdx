@@ -1,0 +1,249 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "Data Structures & Algorithms", 
+  title: "Understanding Heap Data Structure",
+  description: "A deep dive into heap data structure, its implementation, and real-world applications in React Fiber",
+  date: "2024-11-28",
+  category: "algorithm",
+  slug: "heap"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">Understanding Heap Data Structure</div>
+
+In my <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-4" internal>React Deep Dive series</TextHighlight>, I mentioned that React Fiber's scheduler uses a min-heap data structure to manage and prioritize tasks in its concurrent rendering model. Let's explore how heaps work and why they're perfect for this use case.
+
+## What is a Heap?
+
+A heap is a complete binary tree that satisfies the heap property:
+- **Min-Heap**: Every parent node is ≤ its children
+- **Max-Heap**: Every parent node is ≥ its children
+
+## Array Representation
+
+Heaps are efficiently stored as arrays. For any element at index `i`:
+- Parent: `Math.floor((i - 1) / 2)`
+- Left Child: `2 * i + 1`
+- Right Child: `2 * i + 2`
+
+<CodeBlock language="javascript">
+{`// Example: Given the array [10, 5, 3, 2, 4]
+// The tree structure is:
+//       10
+//      /  \\
+//     5    3
+//    / \\
+//   2   4
+
+// Array indices:
+// [0] = 10  (root)
+// [1] = 5   (left child of 10)
+// [2] = 3   (right child of 10)
+// [3] = 2   (left child of 5)
+// [4] = 4   (right child of 5)`}
+</CodeBlock>
+
+## Why Heaps in React Fiber?
+
+React Fiber needs to:
+1. Prioritize updates (e.g., user input > animations > background data fetching)
+2. Interrupt/pause low-priority work if high-priority work arrives
+3. Schedule tasks efficiently to avoid jank (e.g., dropping frames)
+
+A min-heap (priority queue) is ideal for this because:
+- It ensures the highest-priority task is always processed next (O(1) peek)
+- Insertion/extraction is O(log n), which is efficient for dynamic task queues
+
+## Implementing a Min-Heap
+
+Let's implement a min-heap and solve LeetCode 215 (Kth Largest Element in an Array) to demonstrate its usage:
+
+<CodeBlock language="javascript">
+{`class MinHeap {
+    constructor() {
+        this.heap = [];
+    }
+
+    // Get parent index
+    getParentIndex(i) {
+        return Math.floor((i - 1) / 2);
+    }
+
+    // Get left child index
+    getLeftChildIndex(i) {
+        return 2 * i + 1;
+    }
+
+    // Get right child index
+    getRightChildIndex(i) {
+        return 2 * i + 2;
+    }
+
+    // Swap two elements
+    swap(i, j) {
+        [this.heap[i], this.heap[j]] = [this.heap[j], this.heap[i]];
+    }
+
+    // Insert a new element
+    insert(value) {
+        this.heap.push(value);
+        this.heapifyUp();
+    }
+
+    // Remove and return the minimum element
+    extractMin() {
+        if (this.heap.length === 0) return null;
+        
+        const min = this.heap[0];
+        const last = this.heap.pop();
+        
+        if (this.heap.length > 0) {
+            this.heap[0] = last;
+            this.heapifyDown();
+        }
+        
+        return min;
+    }
+
+    // Move an element up to maintain heap property
+    heapifyUp() {
+        let currentIndex = this.heap.length - 1;
+        
+        while (currentIndex > 0) {
+            const parentIndex = this.getParentIndex(currentIndex);
+            
+            if (this.heap[parentIndex] <= this.heap[currentIndex]) {
+                break;
+            }
+            
+            this.swap(parentIndex, currentIndex);
+            currentIndex = parentIndex;
+        }
+    }
+
+    // Move an element down to maintain heap property
+    heapifyDown() {
+        let currentIndex = 0;
+        
+        while (true) {
+            let smallestIndex = currentIndex;
+            const leftChildIndex = this.getLeftChildIndex(currentIndex);
+            const rightChildIndex = this.getRightChildIndex(currentIndex);
+            
+            if (leftChildIndex < this.heap.length && 
+                this.heap[leftChildIndex] < this.heap[smallestIndex]) {
+                smallestIndex = leftChildIndex;
+            }
+            
+            if (rightChildIndex < this.heap.length && 
+                this.heap[rightChildIndex] < this.heap[smallestIndex]) {
+                smallestIndex = rightChildIndex;
+            }
+            
+            if (smallestIndex === currentIndex) {
+                break;
+            }
+            
+            this.swap(currentIndex, smallestIndex);
+            currentIndex = smallestIndex;
+        }
+    }
+}`}
+</CodeBlock>
+
+## Solving LeetCode 215
+
+Let's use our min-heap to find the kth largest element:
+
+<CodeBlock language="javascript">
+{`function findKthLargest(nums, k) {
+    const minHeap = new MinHeap();
+    
+    // Keep only k elements in the heap
+    for (const num of nums) {
+        minHeap.insert(num);
+        if (minHeap.heap.length > k) {
+            minHeap.extractMin();
+        }
+    }
+    
+    return minHeap.heap[0];
+}
+
+// Example usage:
+const nums = [3, 2, 1, 5, 6, 4];
+const k = 2;
+console.log(findKthLargest(nums, k)); // Output: 5`}
+</CodeBlock>
+
+## How React Fiber Uses Heaps
+
+React's scheduler uses a min-heap to manage task priorities:
+
+<CodeBlock language="javascript">
+{`// Simplified version of React's scheduler
+class Scheduler {
+    constructor() {
+        this.taskQueue = new MinHeap();
+    }
+
+    scheduleTask(priority, task) {
+        this.taskQueue.insert({ priority, task });
+    }
+
+    processNextTask() {
+        const { task } = this.taskQueue.extractMin();
+        task();
+    }
+}
+
+// Usage in React Fiber
+const scheduler = new Scheduler();
+
+// High priority task (user interaction)
+scheduler.scheduleTask(1, () => {
+    // Handle user input
+});
+
+// Low priority task (background update)
+scheduler.scheduleTask(5, () => {
+    // Update background data
+});`}
+</CodeBlock>
+
+## Time Complexity
+
+- Insertion: O(log n)
+- Extraction: O(log n)
+- Peek (get min/max): O(1)
+- Heapify: O(n)
+
+## Space Complexity
+
+- O(n) for storing the heap
+
+## Real-World Applications
+
+1. **React Fiber Scheduler**
+   - Task prioritization
+   - Efficient task scheduling
+   - Interruptible rendering
+
+2. **Operating Systems**
+   - Process scheduling
+   - Priority queues
+   - Event handling
+
+3. **Graph Algorithms**
+   - Dijkstra's algorithm
+   - Prim's algorithm
+   - A* pathfinding
+
+## Conclusion
+
+Heaps are a fundamental data structure that powers many real-world applications, including React's concurrent rendering model. Their efficient O(log n) operations and O(1) access to the highest/lowest priority element make them ideal for task scheduling and prioritization.
+
+</MdxLayout>

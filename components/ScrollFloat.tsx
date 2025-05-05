@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useMemo, useRef, ReactNode, RefObject } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -25,8 +23,8 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
   textClassName = "",
   animationDuration = 1,
   ease = "back.inOut(2)",
-  scrollStart = "center center+=30%",
-  scrollEnd = "bottom center+=30%",
+  scrollStart = "center bottom+=50%",
+  scrollEnd = "bottom top",
   stagger = 0.03,
 }) => {
   const containerRef = useRef<HTMLHeadingElement>(null);
@@ -50,11 +48,9 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
         : window;
 
     const charElements = el.querySelectorAll(".inline-block");
-    const triggerElement = document.querySelector(".blog-grid");
 
-    if (!triggerElement) return;
-
-    gsap.fromTo(
+    // Create the animation without using gsap.context()
+    const animation = gsap.fromTo(
       charElements,
       {
         willChange: "opacity, transform",
@@ -73,14 +69,27 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
         scaleX: 1,
         stagger: stagger,
         scrollTrigger: {
-          trigger: triggerElement,
+          trigger: el,
           scroller,
           start: scrollStart,
           end: scrollEnd,
-          scrub: true,
+          scrub: 1.5,
         },
       }
     );
+
+    // Clean up function
+    return () => {
+      if (animation) {
+        animation.kill();
+      }
+      // Also kill any ScrollTrigger instances associated with this element
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (trigger.vars.trigger === el) {
+          trigger.kill();
+        }
+      });
+    };
   }, [
     scrollContainerRef,
     animationDuration,
@@ -96,7 +105,7 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
       className={`my-5 overflow-hidden ${containerClassName}`}
     >
       <span
-        className={`inline-block text-[clamp(1.6rem,4vw,3rem)] leading-[1.5] ${textClassName}`}
+        className={`inline-block text-[clamp(2rem,5vw,4rem)] leading-[1.5] ${textClassName}`}
       >
         {splitText}
       </span>

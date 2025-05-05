@@ -7,7 +7,9 @@ const nextConfig = {
 };
 
 const withMDX = createMDX({
-  // Add markdown plugins here, as desired
+  options: {
+    providerImportSource: "@mdx-js/react",
+  },
 });
 
 // Merge MDX config with Next.js config

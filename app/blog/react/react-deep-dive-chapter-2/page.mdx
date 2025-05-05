@@ -1,0 +1,208 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "React Deep Dive", 
+  title: "Chapter 2: Introduction to React Fiber",
+  description: "Chapter 2: Introduction to React Fiber",
+  date: "2024-11-28",
+  category: "react",
+  slug: "react-deep-dive-chapter-2"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">React Deep Dive</div>
+## <div className="text-center">Chapter 2: Introduction to React Fiber</div>
+
+In the previous chapter, we saw how React's recursive rendering process could block the main thread and make the UI unresponsive. React 16 introduced a new reconciliation engine called <TextHighlight theme="default">Fiber</TextHighlight> to solve these problems. But what exactly is Fiber, and how does it work?
+
+## What is Fiber?
+
+Fiber is React's new reconciliation engine that enables:
+- Interruptible rendering
+- Priority-based updates
+- Concurrent rendering
+- Time-slicing
+
+At its core, Fiber is a reimplementation of the stack, but with a crucial difference: it can be interrupted and resumed. Let's understand why this is important.
+
+## Why Some Lifecycle Methods Are Marked as UNSAFE
+
+Remember those lifecycle methods with the <TextHighlight theme="danger">UNSAFE_</TextHighlight> prefix I mentioned in Chapter 1? Now we can understand why they were marked as unsafe. The methods in question are:
+
+- <TextHighlight theme="code">componentWillMount</TextHighlight>
+- <TextHighlight theme="code">componentWillReceiveProps</TextHighlight>
+- <TextHighlight theme="code">componentWillUpdate</TextHighlight>
+
+These methods were marked as unsafe because Fiber's interruptible nature means they might be called multiple times during a single update. Here's why:
+
+<CodeBlock language="javascript">
+{`// Example of a problematic lifecycle method
+class Component extends React.Component {
+    componentWillMount() {
+        // This might be called multiple times
+        // due to Fiber's interruptible rendering
+        this.setState({ count: this.state.count + 1 });
+    }
+}`}
+</CodeBlock>
+
+In the old stack-based renderer, these methods were guaranteed to be called exactly once per update. But with Fiber:
+1. Rendering can be interrupted and resumed
+2. The same update might be processed multiple times
+3. These lifecycle methods could be called multiple times
+4. This could lead to unexpected side effects and bugs
+
+This is why React team:
+1. Added the <TextHighlight theme="danger">UNSAFE_</TextHighlight> prefix to warn developers
+2. Introduced new lifecycle methods that are safe with interruptible rendering
+3. Recommended using the new methods instead
+
+## The Stack vs Fiber
+
+In the previous chapter, we saw this recursive render function:
+
+<CodeBlock language="javascript">
+{`function render(element, container) {
+    const dom =
+      element.type == "TEXT_ELEMENT"
+        ? document.createTextNode("")
+        : document.createElement(element.type)
+
+    const isProperty = key => key !== "children"
+    Object.keys(element.props)
+      .filter(isProperty)
+      .forEach(name => {
+        dom[name] = element.props[name]
+      })
+
+    element.props.children.forEach(child =>
+      render(child, dom)
+    )
+
+    container.appendChild(dom)
+}`}
+</CodeBlock>
+
+This implementation uses the JavaScript call stack, which means:
+1. Each recursive call adds a new frame to the stack
+2. The stack must be completely unwound before we can do anything else
+3. We can't pause in the middle of rendering
+
+Fiber replaces this with a linked list of fiber nodes. Here's a simplified version of what a fiber node looks like:
+
+<CodeBlock language="javascript">
+{`type Fiber = {
+    type: any,                    // The type of element (div, span, etc.)
+    props: any,                   // The props
+    dom: HTMLElement | null,      // The actual DOM node
+    parent: Fiber | null,         // Parent fiber
+    child: Fiber | null,          // First child fiber
+    sibling: Fiber | null,        // Next sibling fiber
+    alternate: Fiber | null,      // The fiber from the previous render
+    effectTag: string,            // What to do with this fiber (PLACEMENT, UPDATE, DELETION)
+    lanes: number,                // Priority of this update
+}`}
+</CodeBlock>
+
+## How Fiber Works
+
+Instead of recursively calling the render function, Fiber breaks the work into small units and processes them one at a time. Here's a simplified version of how it works:
+
+<CodeBlock language="javascript">
+{`function performUnitOfWork(fiber) {
+    // 1. Create DOM node
+    if (!fiber.dom) {
+        fiber.dom = createDom(fiber)
+    }
+
+    // 2. Create new fibers for children
+    const elements = fiber.props.children
+    let index = 0
+    let prevSibling = null
+
+    while (index < elements.length) {
+        const element = elements[index]
+        const newFiber = {
+            type: element.type,
+            props: element.props,
+            parent: fiber,
+            dom: null,
+        }
+
+        // Link fibers together
+        if (index === 0) {
+            fiber.child = newFiber
+        } else {
+            prevSibling.sibling = newFiber
+        }
+
+        prevSibling = newFiber
+        index++
+    }
+
+    // 3. Return next unit of work
+    if (fiber.child) {
+        return fiber.child
+    }
+    let nextFiber = fiber
+    while (nextFiber) {
+        if (nextFiber.sibling) {
+            return nextFiber.sibling
+        }
+        nextFiber = nextFiber.parent
+    }
+}`}
+</CodeBlock>
+
+The key differences from the recursive approach are:
+1. Work is broken into small units
+2. Each unit can be processed independently
+3. We can pause and resume work at any point
+4. The browser can handle high-priority tasks between units
+
+## The Work Loop
+
+Fiber uses a work loop to process these units. For this example, we'll use <TextHighlight theme="code">requestIdleCallback</TextHighlight> to demonstrate the concept, but React actually implements its own scheduler for better control and browser compatibility:
+
+<CodeBlock language="javascript">
+{`function workLoop(deadline) {
+    let shouldYield = false
+    while (nextUnitOfWork && !shouldYield) {
+        nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+        shouldYield = deadline.timeRemaining() < 1
+    }
+    requestIdleCallback(workLoop)
+}
+
+requestIdleCallback(workLoop)`}
+</CodeBlock>
+
+This loop:
+1. Processes one unit of work at a time
+2. Checks if there's time remaining in the current frame
+3. Yields to the browser if needed
+4. Continues with the next unit in the next frame
+
+In React's actual implementation, the scheduler is much more sophisticated:
+- It handles priority levels for different types of updates
+- It can interrupt and resume work based on priority
+- It manages time slicing across multiple frames
+- It provides better browser compatibility than <TextHighlight theme="code">requestIdleCallback</TextHighlight>
+
+We'll explore React's scheduler in more detail in <TextHighlight theme="code" href="/blog/react/react-deep-dive-chapter-4" internal>Chapter 4</TextHighlight> when we discuss priority management.
+
+## Benefits of Fiber
+
+This new architecture enables several important features:
+
+1. **Concurrent Rendering**: React can work on multiple versions of the UI simultaneously
+2. **Time Slicing**: Work is broken into small chunks that can be spread across multiple frames
+3. **Priority-based Updates**: Different updates can have different priorities
+4. **Suspense**: Components can "suspend" while waiting for data
+5. **Error Boundaries**: Better error handling with the ability to recover from errors
+
+In the next chapter, we'll dive deeper into how Fiber handles updates and reconciliation.
+
+</MdxLayout>
