@@ -8,8 +8,9 @@ import { useTheme } from "next-themes";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const modelUrl =
-  "https://pub-506fb8b20a2a47668961c0d63217f1cb.r2.dev/laptop-optimized.glb";
+const modelUrl = process.env.NEXT_PUBLIC_ASSETS_DOMAIN
+  ? `${process.env.NEXT_PUBLIC_ASSETS_DOMAIN}/laptop-optimized.glb`
+  : "/laptop-optimized.glb"; // Fallback to local file if domain not configured
 
 useGLTF.preload(modelUrl);
 
