@@ -38,27 +38,30 @@ export default function BlogSection() {
   const blogPosts = [
     {
       id: 1,
-      title: "React Deep Dive",
-      subtitle: "How Fiber Powers Reconciliation & Rendering",
+      title: "React Deep Dive Series",
+      subtitle:
+        "Exploring React's internals: Fiber architecture, reconciliation, and rendering pipeline",
       image: "/react-logo.svg",
       link: "/blog/react/react-deep-dive-chapter-1",
-      category: "React",
+      category: "Technical",
     },
     {
       id: 2,
-      title: "Daily Reflections",
-      subtitle: "Personal thoughts and insights from my everyday experiences",
+      title: "Life in Tech",
+      subtitle:
+        "Personal insights on career growth, AI's impact, and navigating the tech industry",
       image: "/daily-life.jpg",
-      link: "/blog/daily-reflections",
-      category: "Life",
+      link: "/blog/life/dont-be-a-js-coder",
+      category: "Insights",
     },
     {
       id: 3,
       title: "Algorithm Journey",
-      subtitle: "My learning path through data structures and algorithms",
+      subtitle:
+        "Deep dives into data structures, algorithms, and problem-solving techniques",
       image: "/algorithms.png",
       link: "/blog/algorithm/heap",
-      category: "Programming",
+      category: "Algorithms",
     },
   ];
 
@@ -105,13 +108,16 @@ export default function BlogSection() {
           let yPos = window.innerHeight * (1 - cardProgress);
           let xPos = 0;
 
-          // Apply horizontal movement based on card index
-          if (index === 0) {
-            xPos = -window.innerWidth * 0.3 * cardProgress;
-          } else if (index === 1) {
-            xPos = 0;
-          } else if (index === 2) {
-            xPos = window.innerWidth * 0.3 * cardProgress;
+          // Only apply horizontal movement on larger screens
+          if (window.innerWidth >= 768) {
+            // md breakpoint
+            if (index === 0) {
+              xPos = -window.innerWidth * 0.3 * cardProgress;
+            } else if (index === 1) {
+              xPos = 0;
+            } else if (index === 2) {
+              xPos = window.innerWidth * 0.3 * cardProgress;
+            }
           }
 
           gsap.to(card, {
@@ -195,7 +201,7 @@ export default function BlogSection() {
             <a
               href={post.link}
               key={idx}
-              className={`blog-card p-6 rounded-lg border w-[450px] h-[500px] border-gray-200 dark:border-gray-700 bg-light-neutral dark:bg-dark-neutral absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
+              className={`blog-card p-6 rounded-lg border w-full md:w-[450px] h-[500px] border-gray-200 dark:border-gray-700 bg-light-neutral dark:bg-dark-neutral absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
                 hoveredCard === idx
                   ? "scale-110 shadow-xl z-10"
                   : "hover:shadow-lg"

@@ -186,7 +186,6 @@ This implementation has a critical flaw: it uses recursive calls to render the e
 This was a fundamental limitation in React versions before 16. The recursive nature of the render process made it impossible to implement features like:
 - Concurrent rendering
 - Time-slicing
-- Suspense
 - Priority-based updates
 
 In the next chapter, we'll explore how React 16's Fiber architecture solved these problems by introducing an interruptible rendering process.

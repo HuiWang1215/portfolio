@@ -26,7 +26,7 @@ export default function About() {
         </p>
 
         <p className="mb-6 text-black/80 dark:text-white/80">
-          I'm currently a mid-level frontend developer working at Trip.com,
+          I'm currently a mid-senior frontend developer working at Trip.com,
           where I focus on developing mobile applications and mobile web
           experiences. My work involves creating responsive, user-friendly
           interfaces that help travelers plan and book their trips seamlessly.

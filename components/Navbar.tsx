@@ -1,11 +1,13 @@
 "use client";
 
 import GradientButton from "./GradientButton";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import NavLink from "./NavLink";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const nav = navRef.current;
@@ -33,6 +35,18 @@ export default function Navbar() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMenuOpen && !(event.target as Element).closest(".mobile-menu")) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [isMenuOpen]);
 
   return (
     <nav
@@ -63,15 +77,66 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Right side - Blog and Theme button */}
+          {/* Right side - Navigation and Theme button */}
           <div className="flex items-center space-x-8 pr-2 sm:px-4 lg:pr-8">
-            <NavLink href="/" text="Home" size="2xl" />
-            <NavLink href="/blog" text="Blog" size="2xl" />
-            <NavLink href="/about" text="About" size="2xl" />
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              <NavLink href="/" text="Home" size="2xl" />
+              <NavLink href="/blog" text="Blog" size="2xl" />
+              <NavLink href="/about" text="About" size="2xl" />
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-light-neutral dark:hover:bg-dark-neutral transition-colors"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <div className="w-6 h-5 relative flex flex-col justify-between">
+                <span
+                  className={`w-full h-0.5 bg-light-primary dark:bg-dark-primary transition-transform duration-300 ${
+                    isMenuOpen ? "rotate-45 translate-y-2" : ""
+                  }`}
+                />
+                <span
+                  className={`w-full h-0.5 bg-light-primary dark:bg-dark-primary transition-opacity duration-300 ${
+                    isMenuOpen ? "opacity-0" : ""
+                  }`}
+                />
+                <span
+                  className={`w-full h-0.5 bg-light-primary dark:bg-dark-primary transition-transform duration-300 ${
+                    isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+                  }`}
+                />
+              </div>
+            </button>
+
             <GradientButton animationSpeed={2} />
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden mobile-menu absolute top-full left-0 right-0 bg-light-white/95 dark:bg-dark-black/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800"
+          >
+            <div
+              className="flex flex-col py-4 px-4 space-y-4"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <NavLink href="/" text="Home" size="2xl" />
+              <NavLink href="/blog" text="Blog" size="2xl" />
+              <NavLink href="/about" text="About" size="2xl" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

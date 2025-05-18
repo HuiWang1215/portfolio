@@ -25,9 +25,9 @@ A heap is a complete binary tree that satisfies the heap property:
 ## Array Representation
 
 Heaps are efficiently stored as arrays. For any element at index `i`:
-- Parent: `Math.floor((i - 1) / 2)`
-- Left Child: `2 * i + 1`
-- Right Child: `2 * i + 2`
+- Parent: <TextHighlight theme="code">Math.floor((i - 1) / 2)</TextHighlight>
+- Left Child: <TextHighlight theme="code">2 * i + 1</TextHighlight>
+- Right Child: <TextHighlight theme="code">2 * i + 2</TextHighlight>
 
 <CodeBlock language="javascript">
 {`// Example: Given the array [10, 5, 3, 2, 4]

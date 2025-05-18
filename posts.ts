@@ -24,6 +24,18 @@ export const postsByCategory: IPostsByCategory = {
         "A deep dive into heap data structure, its implementation, and real-world applications.",
     },
   ],
+  life: [
+    {
+      title: "Trapped in the Big Tech Assembly Line",
+      slug: "dont-be-a-js-coder",
+      description: "A guide to becoming a better developer.",
+    },
+    {
+      title: "How AI Is Changing Frontend Development",
+      slug: "ai-impacts",
+      description: "How AI is changing the world.",
+    },
+  ],
 };
 
 export interface Series {
@@ -70,6 +82,19 @@ export const series: Series[] = [
       {
         slug: "heap",
         title: "Understanding Heap Data Structure",
+      },
+    ],
+  },
+  {
+    series: "Life",
+    posts: [
+      {
+        slug: "dont-be-a-js-coder",
+        title: "Trapped in the Big Tech Assembly Line",
+      },
+      {
+        slug: "ai-impacts",
+        title: "How AI Is Changing Frontend Development",
       },
     ],
   },
