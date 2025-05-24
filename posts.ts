@@ -23,6 +23,12 @@ export const postsByCategory: IPostsByCategory = {
       description:
         "A deep dive into heap data structure, its implementation, and real-world applications.",
     },
+    {
+      title: "Understanding Depth-First Search (DFS)",
+      slug: "dfs",
+      description:
+        "A deep dive into depth-first search (DFS), its implementation, and real-world applications.",
+    },
   ],
   life: [
     {
@@ -82,6 +88,10 @@ export const series: Series[] = [
       {
         slug: "heap",
         title: "Understanding Heap Data Structure",
+      },
+      {
+        slug: "dfs",
+        title: "Understanding Depth-First Search (DFS)",
       },
     ],
   },

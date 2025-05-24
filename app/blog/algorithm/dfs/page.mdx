@@ -1,0 +1,216 @@
+import MdxLayout from "@/components/MdxLayout";
+import CodeBlock from "@/components/CodeBlock";
+import TextHighlight from "@/components/TextHighlight";
+
+export const metadata = {
+  series: "Data Structures & Algorithms", 
+  title: "Understanding Depth-First Search (DFS)",
+  description: "A deep dive into DFS algorithm, its implementation, and real-world applications in React Fiber",
+  date: "2024-03-19",
+  category: "algorithm",
+  slug: "dfs"
+};
+
+<MdxLayout metadata={metadata}>
+# <div className="text-center">Understanding Depth-First Search (DFS)</div>
+
+In the previous chapter of my <TextHighlight theme="default" href="/blog/react/react-deep-dive-chapter-3" internal>React Deep Dive series</TextHighlight>, we learned that JSX in React is converted into a Fiber tree. This conversion process uses an algorithm similar to DFS to traverse and construct the tree structure. Let's explore how DFS works and why understanding it helps us better comprehend React's rendering process.
+
+## What is DFS?
+
+Depth-First Search is a graph/tree traversal algorithm that:
+- Explores as far as possible along each branch before backtracking
+- Uses a stack (either explicit or implicit via recursion)
+- Visits each node exactly once
+
+## DFS in Binary Trees
+
+Let's look at a simple binary tree example:
+
+<CodeBlock language="javascript">
+{`// Example: Given the tree:
+//       1
+//      / \\
+//     2   3
+//    / \\
+//   4   5
+
+// DFS Traversal Orders:
+// Pre-order:  1 -> 2 -> 4 -> 5 -> 3
+// In-order:   4 -> 2 -> 5 -> 1 -> 3
+// Post-order: 4 -> 5 -> 2 -> 3 -> 1`}
+</CodeBlock>
+
+## Implementing DFS
+
+Let's implement DFS in three ways:
+
+<CodeBlock language="javascript">
+{`class TreeNode {
+    constructor(val) {
+        this.val = val;
+        this.left = null;
+        this.right = null;
+    }
+}
+
+// 1. Recursive Pre-order DFS
+function preorderDFS(root) {
+    if (!root) return;
+    
+    console.log(root.val);        // Process current node
+    preorderDFS(root.left);       // Visit left subtree
+    preorderDFS(root.right);      // Visit right subtree
+}
+
+// 2. Recursive Post-order DFS
+function postorderDFS(root) {
+    if (!root) return;
+    
+    postorderDFS(root.left);      // Visit left subtree
+    postorderDFS(root.right);     // Visit right subtree
+    console.log(root.val);        // Process current node
+}
+
+// 3. Recursive In-order DFS
+function inorderDFS(root) {
+    if (!root) return;
+    
+    inorderDFS(root.left);        // Visit left subtree
+    console.log(root.val);        // Process current node
+    inorderDFS(root.right);       // Visit right subtree
+}`}
+</CodeBlock>
+
+## Why DFS in React Fiber?
+
+React's Fiber tree construction shares similarities with DFS for several reasons:
+1. **Natural Component Hierarchy**
+   - JSX components form a tree structure
+   - DFS naturally follows the component hierarchy
+   - Matches how developers think about component relationships
+
+2. **Efficient Tree Construction**
+   - DFS allows React to process components in a predictable order
+   - Helps maintain consistency in tree construction
+   - Enables efficient reconciliation
+
+3. **Priority-based Interruption**
+   - DFS can be paused and resumed at any point
+   - Allows React to interrupt low-priority work
+   - Enables concurrent rendering
+
+## DFS in React Fiber
+
+Here's a simplified version of how React constructs its Fiber tree, which follows a pattern similar to DFS:
+
+<CodeBlock language="javascript">
+{`function performUnitOfWork(fiber) {
+    // 1. Begin work on current fiber
+    beginWork(fiber);
+    
+    // 2. Process children (similar to DFS)
+    if (fiber.child) {
+        return fiber.child;
+    }
+    
+    // 3. Process siblings
+    let nextFiber = fiber;
+    while (nextFiber) {
+        // Complete current fiber
+        completeWork(nextFiber);
+        
+        if (nextFiber.sibling) {
+            return nextFiber.sibling;
+        }
+        
+        // Move to parent
+        nextFiber = nextFiber.return;
+    }
+}`}
+</CodeBlock>
+
+## Solving LeetCode 200 (Number of Islands)
+
+Let's use DFS to solve a classic problem:
+
+<CodeBlock language="javascript">
+{`function numIslands(grid) {
+    if (!grid || !grid.length) return 0;
+    
+    const rows = grid.length;
+    const cols = grid[0].length;
+    let islands = 0;
+    
+    function dfs(r, c) {
+        // Base cases
+        if (r < 0 || r >= rows || c < 0 || c >= cols || grid[r][c] === '0') {
+            return;
+        }
+        
+        // Mark as visited
+        grid[r][c] = '0';
+        
+        // Explore all four directions
+        dfs(r + 1, c); // down
+        dfs(r - 1, c); // up
+        dfs(r, c + 1); // right
+        dfs(r, c - 1); // left
+    }
+    
+    // Iterate through grid
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (grid[r][c] === '1') {
+                islands++;
+                dfs(r, c);
+            }
+        }
+    }
+    
+    return islands;
+}
+
+// Example usage:
+const grid = [
+    ['1','1','0','0','0'],
+    ['1','1','0','0','0'],
+    ['0','0','1','0','0'],
+    ['0','0','0','1','1']
+];
+console.log(numIslands(grid)); // Output: 3`}
+</CodeBlock>
+
+## Time Complexity
+
+- For a tree with n nodes: O(n)
+- For a graph with V vertices and E edges: O(V + E)
+
+## Space Complexity
+
+- Recursive DFS: O(h) where h is the height of the tree
+- Iterative DFS: O(w) where w is the maximum width of the tree
+
+## Real-World Applications
+
+1. **React Fiber**
+   - Component tree traversal
+   - State updates
+   - Reconciliation process
+
+2. **Graph Problems**
+   - Path finding
+   - Cycle detection
+   - Topological sorting
+
+3. **Tree Operations**
+   - Tree validation
+   - Tree serialization
+   - Tree comparison
+
+## Conclusion
+
+DFS is a fundamental algorithm that powers many real-world applications, including React's rendering process. Its ability to traverse tree structures efficiently and its natural fit with component hierarchies make it an ideal choice for React Fiber's implementation.
+
+<TextHighlight theme="info">Understanding DFS helps us better comprehend how React traverses and updates the component tree, leading to more efficient and maintainable applications.</TextHighlight>
+</MdxLayout>
