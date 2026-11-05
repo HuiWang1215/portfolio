@@ -26,10 +26,11 @@ export default function About() {
         </p>
 
         <p className="mb-6 text-black/80 dark:text-white/80">
-          I'm currently a mid-senior frontend developer working at Trip.com,
-          where I focus on developing mobile applications and mobile web
-          experiences. My work involves creating responsive, user-friendly
-          interfaces that help travelers plan and book their trips seamlessly.
+          I'm a software engineer with experience at Trip.com and Canva,
+          working across the broader frontend space, including mobile apps,
+          mobile web, and modern web applications. I've also been exploring and
+          building with AI agents, combining product-minded engineering with
+          user-friendly interfaces and practical AI workflows.
         </p>
 
         <h2 className="text-2xl font-bold mt-8 mb-4 text-black dark:text-white">
